@@ -139,7 +139,6 @@ def push_context():
 # ---------------------------------------------------------------------------
 # POST /v1/tick
 # ---------------------------------------------------------------------------
-
 @app.route("/v1/tick", methods=["POST"])
 def tick():
     data = request.get_json(silent=True) or {}
@@ -149,12 +148,24 @@ def tick():
     if not isinstance(available_triggers, list):
         available_triggers = []
 
+    tick_start = time.time()
+    TICK_BUDGET_SECONDS = 10  # stay well under the judge's 15s client timeout
+
     actions = []
     merchants_acted_this_tick: set[str] = set()
 
     for trigger_id in available_triggers:
         if len(actions) >= MAX_ACTIONS_PER_TICK:
             break
+
+        elapsed = time.time() - tick_start
+        if elapsed > TICK_BUDGET_SECONDS:
+            # Running low on time — return what's already composed rather
+            # than risk the whole request timing out on the judge's side.
+            print(f"[tick] budget exhausted at {elapsed:.1f}s with "
+                  f"{len(actions)} action(s) composed; stopping early", flush=True)
+            break
+
         try:
             trigger_id = str(trigger_id)
             trigger_peek = storage.get_context("trigger", trigger_id)
@@ -189,7 +200,11 @@ def tick():
                 merchant.get("merchant_id", ""),
                 customer.get("customer_id") if customer else None,
             )
+
+            call_start = time.time()
             composed = composer.compose(category, merchant, trigger, customer, recent_bodies=recent_bodies)
+            print(f"[tick] {trigger_id} composed in {time.time() - call_start:.1f}s "
+                  f"(cumulative {time.time() - tick_start:.1f}s)", flush=True)
 
             conversation_id = f"conv_{merchant.get('merchant_id','m')}_{trigger_id}"
             customer_id = customer.get("customer_id") if customer else None
@@ -220,7 +235,6 @@ def tick():
             continue
 
     return jsonify({"actions": actions}), 200
-
 
 # ---------------------------------------------------------------------------
 # POST /v1/reply
