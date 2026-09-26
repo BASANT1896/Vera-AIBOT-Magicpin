@@ -1,0 +1,12 @@
+# Core web server
+Flask==3.0.3
+gunicorn==22.0.0
+
+# Optional: loads .env for local dev only (bot.py degrades gracefully if
+# this isn't installed — production envs should set real env vars anyway)
+python-dotenv==1.0.1
+
+# NOTE: llm_provider.py deliberately uses only the Python standard library
+# (urllib) to talk to Anthropic/OpenAI/DeepSeek/Gemini, so no SDK packages
+# (anthropic, openai, google-generativeai, ...) are required. This keeps
+# the image small and avoids version-pinning fights with those SDKs.
