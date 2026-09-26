@@ -59,7 +59,3 @@ A single worker with multiple threads is required — see `storage.py` for why (
 ## Deployment
 
 Deployed as a Docker container on Render. A scheduled health-check ping (via cron-job.org, every 10 minutes) keeps the free-tier instance warm during evaluation to avoid cold-start delays.
-
-## Team
-
-Team Vera Rebuild
